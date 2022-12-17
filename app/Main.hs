@@ -1,12 +1,13 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 module Main where
 
-import           Control.Lens
-import qualified Data.Set     as S
-import qualified Data.Map     as M
-import qualified Data.Text    as T
+import           Control.Lens  (foldMapByOf, folded, makeLenses)
+import           Data.Foldable (foldr')
+import qualified Data.Map      as M
+import qualified Data.Set      as S
+import qualified Data.Text     as T
 
 -- foldMapByOf :: Fold s a -> (r -> r -> r) -> r -> (a -> r) -> s -> r
 
@@ -17,11 +18,6 @@ data Person = Person
 
 makeLenses ''Person
 
--- data Person
-
-x :: Integer
-x = foldMapBy (+) 1 (+ 1) [1, 2, 3]
-
 people :: [Person]
 people =
   [
@@ -30,7 +26,6 @@ people =
     , Person "paul" $ S.fromList ["pizza", "curry"]
   ]
 
--- uniqueFoods :: [T.Text]
 uniqueFoods :: S.Set T.Text
 uniqueFoods = foldMapByOf (folded . foods) (<>) mempty id people
 
@@ -38,11 +33,13 @@ foodCounts :: M.Map T.Text Int
 foodCounts =
   foldMapByOf
     (folded . foods)
-    _a
-    (M.)
-    _c
+    (M.unionWith (+))
+    mempty
+    toFrequencies
     people
-
+  where
+    toFrequencies :: (Ord a, Foldable f) => f a -> M.Map a Int
+    toFrequencies = foldr' (`M.insert` 1) mempty
 
 main :: IO ()
 main = putStrLn "Hello, Haskell!"
